@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArtShare | Join the Community</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --card-bg: #1a1a1a;
+            --text: #ffffff;
+            --accent: #00d4ff;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .auth-card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border: 1px solid #222;
+        }
+
+        .auth-card h2 {
+            margin: 0 0 10px 0;
+            text-align: center;
+            color: var(--accent);
+            font-size: 1.8rem;
+        }
+
+        .auth-card p.subtitle {
+            text-align: center;
+            opacity: 0.6;
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+
+        .form-group { margin-bottom: 15px; }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #222;
+            color: white;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        /* Hidden by default, shown during signup */
+        #username-group { display: none; }
+
+        button {
+            width: 100%;
+            background: var(--accent);
+            color: black;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+
+        button:active { transform: scale(0.98); }
+
+        .toggle-text {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        .toggle-text a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        /* Background glow effect */
+        .bg-glow {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: var(--accent);
+            filter: blur(150px);
+            opacity: 0.1;
+            z-index: -1;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+
+<div class="auth-card">
+    <h2 id="title">Welcome Back</h2>
+    <p class="subtitle" id="subtitle">Log in to your artist account</p>
+
+    <form id="authForm">
+        <div class="form-group" id="username-group">
+            <input type="text" id="username" placeholder="Username (e.g. ArtWiz)">
+        </div>
+        <div class="form-group">
+            <input type="email" id="email" placeholder="Email address" required>
+        </div>
+        <div class="form-group">
+            <input type="password" id="password" placeholder="Password" required>
+        </div>
+        <button type="submit" id="submitBtn">Continue</button>
+    </form>
+
+    <div class="toggle-text">
+        <span id="toggleMsg">New to ArtShare?</span> 
+        <a href="#" id="toggleLink">Create account</a>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://zylksrieycibomgmdork.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5bGtzcmlleWNpYm9tZ21kb3JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTUxMjIsImV4cCI6MjA5MzU3MTEyMn0.TfiE4-D4UQWtN4fUkFYGlCsEMSK5S1Mcyrsfpip99BE';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let isSignUp = false;
+
+    // --- Switch between Login and Signup ---
+    document.getElementById('toggleLink').onclick = (e) => {
+        e.preventDefault();
+        isSignUp = !isSignUp;
+        
+        document.getElementById('title').innerText = isSignUp ? "Join ArtShare" : "Welcome Back";
+        document.getElementById('subtitle').innerText = isSignUp ? "Share your creativity with the world" : "Log in to your artist account";
+        document.getElementById('username-group').style.display = isSignUp ? "block" : "none";
+        document.getElementById('toggleMsg').innerText = isSignUp ? "Already have an account?" : "New to ArtShare?";
+        document.getElementById('toggleLink').innerText = isSignUp ? "Login" : "Create account";
+        document.getElementById('submitBtn').innerText = isSignUp ? "Create Account" : "Continue";
+    };
+
+    // --- Form Submission ---
+    document.getElementById('authForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const username = document.getElementById('username').value;
+
+        btn.disabled = true;
+        btn.innerText = "Authenticating...";
+
+        try {
+            if (isSignUp) {
+                // 1. Sign up user
+                const { data: authData, error: authError } = await _supabase.auth.signUp({
+                    email,
+                    password
+                });
+
+                if (authError) throw authError;
+
+                // 2. Create profile record (Required for the username to show up!)
+                if (authData.user) {
+                    const { error: profError } = await _supabase
+                        .from('profiles')
+                        .insert([{ 
+                            id: authData.user.id, 
+                            username: username || 'new_artist',
+                            followers_count: 0,
+                            following_count: 0,
+                            total_likes: 0
+                        }]);
+                    
+                    if (profError) console.warn("Profile creation note:", profError.message);
+                }
+                
+                alert("Account created! You can now log in.");
+                // Switch back to login mode
+                document.getElementById('toggleLink').click();
+
+            } else {
+                // Login
+                const { error } = await _supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+                window.location.href = "index.html";
+            }
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = isSignUp ? "Create Account" : "Continue";
+        }
+    };
+</script>
+</body>
+</html>
